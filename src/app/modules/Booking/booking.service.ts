@@ -2,66 +2,29 @@ import { Booking } from '@prisma/client';
 import httpStatus from 'http-status';
 import ApiError from '../../../errors/ApiError';
 import { getBookingStatus } from '../../../helpers/bookingStatus';
+import {
+  checkBookingConflict,
+  validateBookingTime,
+  validateDuration,
+} from '../../../helpers/bookingTimeValidator';
 import { paginationHelpers } from '../../../helpers/paginationHelper';
 import { IGenericResponse } from '../../../interfaces/common';
 import prisma from '../../../shared/prisma';
 import { IPaginationOptions } from './../../../interfaces/pagination';
-import {
-  bookingSearchableFields,
-  BUFFER_MINUTES,
-  MAX_DURATION_MINUTES,
-  MIN_DURATION_MINUTES,
-} from './booking.constant';
+import { bookingSearchableFields } from './booking.constant';
 
 const createNewBooking = async (payload: Booking): Promise<Booking> => {
   const start = new Date(payload.start);
   const end = new Date(payload.end);
 
   //* Validate start/end time
-  if (end <= start) {
-    throw new ApiError(
-      httpStatus.BAD_REQUEST,
-      'End time must be after start time.',
-    );
-  }
+  validateBookingTime(start, end);
 
   //* validate duration
-  const durationMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
-  if (durationMinutes < MIN_DURATION_MINUTES) {
-    throw new ApiError(
-      httpStatus.BAD_REQUEST,
-      `Booking duration must be at least ${MIN_DURATION_MINUTES} minutes.`,
-    );
-  }
-  if (durationMinutes > MAX_DURATION_MINUTES) {
-    throw new ApiError(
-      httpStatus.BAD_REQUEST,
-      `Booking duration cannot exceed ${MAX_DURATION_MINUTES} minutes.`,
-    );
-  }
+  const durationMinutes = validateDuration(start, end);
 
-  //* Add buffer time to check conflicts
-  const bufferStart = new Date(start.getTime() - BUFFER_MINUTES * 60 * 1000);
-  const bufferEnd = new Date(end.getTime() + BUFFER_MINUTES * 60 * 1000);
-
-  const conflict = await prisma.booking.findFirst({
-    where: {
-      resource: payload.resource,
-      OR: [
-        {
-          start: { lt: bufferEnd },
-          end: { gt: bufferStart },
-        },
-      ],
-    },
-  });
-
-  if (conflict) {
-    throw new ApiError(
-      httpStatus.BAD_REQUEST,
-      'Booking conflicts with another booking (including buffer time).',
-    );
-  }
+  //* check conflicts
+  await checkBookingConflict(payload.resource, start, end);
 
   const result = await prisma.booking.create({
     data: { ...payload, durationMinutes: durationMinutes },
