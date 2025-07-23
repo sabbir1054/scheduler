@@ -38,8 +38,18 @@ const cancelBooking = catchAsync(async (req: Request, res: Response) => {
     data: result,
   });
 });
+const updateBooking = catchAsync(async (req: Request, res: Response) => {
+  const result = await BookingServices.updateBooking(req.params.id, req.body);
+  sendResponse<Booking>(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Booking updated successfully.',
+    data: result,
+  });
+});
 export const BookingController = {
   createNewBooking,
   getAllBooking,
   cancelBooking,
+  updateBooking,
 };

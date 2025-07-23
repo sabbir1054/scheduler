@@ -134,8 +134,46 @@ const cancelBooking = async (id: string): Promise<Booking> => {
   return result;
 };
 
+const updateBooking = async (
+  id: string,
+  payload: Partial<Booking>,
+): Promise<Booking> => {
+  const existingBooking = await prisma.booking.findUnique({ where: { id } });
+  if (!existingBooking) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Booking not found.');
+  }
+
+  const start = payload.start ? new Date(payload.start) : existingBooking.start;
+  const end = payload.end ? new Date(payload.end) : existingBooking.end;
+  const resource = payload.resource
+    ? payload.resource
+    : existingBooking.resource;
+
+  //* Validate start/end time
+  validateBookingTime(start, end);
+
+  //* validate duration
+  const durationMinutes = validateDuration(start, end);
+
+  //* check conflicts
+  await checkBookingConflict(resource, start, end);
+
+  const updatedBooking = await prisma.booking.update({
+    where: { id },
+    data: {
+      ...payload,
+      start,
+      end,
+      durationMinutes,
+    },
+  });
+
+  return updatedBooking;
+};
+
 export const BookingServices = {
   createNewBooking,
   getAllBooking,
   cancelBooking,
+  updateBooking,
 };
