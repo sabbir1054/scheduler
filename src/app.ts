@@ -32,7 +32,7 @@ app.get('/', async (req: Request, res: Response) => {
   res.send('Server is running !');
 });
 
-app.use('/api/v1', routes);
+app.use('/api', routes);
 
 //global error handler
 app.use(globalErrorHandler);
