@@ -11,7 +11,8 @@ import { paginationHelpers } from '../../../helpers/paginationHelper';
 import { IGenericResponse } from '../../../interfaces/common';
 import prisma from '../../../shared/prisma';
 import { IPaginationOptions } from './../../../interfaces/pagination';
-import { bookingSearchableFields } from './booking.constant';
+import { bookingSearchableFields, BUFFER_MINUTES } from './booking.constant';
+import { IResourceType } from './booking.interface';
 
 const createNewBooking = async (payload: Booking): Promise<Booking> => {
   const start = new Date(payload.start);
@@ -171,9 +172,53 @@ const updateBooking = async (
   return updatedBooking;
 };
 
+const getAvailableSlots = async (
+  resource: IResourceType,
+  date: string,
+): Promise<{ start: Date; end: Date }[]> => {
+  const parsedDate = new Date(date);
+  const startOfDay = new Date(parsedDate.setHours(0, 0, 0, 0));
+  const endOfDay = new Date(parsedDate.setHours(23, 59, 59, 999));
+
+  const bookings = await prisma.booking.findMany({
+    where: {
+      resource,
+      OR: [
+        {
+          start: { gte: startOfDay, lte: endOfDay },
+        },
+        {
+          end: { gte: startOfDay, lte: endOfDay },
+        },
+      ],
+    },
+    orderBy: { start: 'asc' },
+  });
+
+  const availableSlots: { start: Date; end: Date }[] = [];
+  let currentStart = startOfDay;
+
+  for (const booking of bookings) {
+    const bufferStart = new Date(
+      booking.start.getTime() - BUFFER_MINUTES * 60 * 1000,
+    );
+    if (currentStart < bufferStart) {
+      availableSlots.push({ start: new Date(currentStart), end: bufferStart });
+    }
+    currentStart = new Date(booking.end.getTime() + BUFFER_MINUTES * 60 * 1000);
+  }
+
+  if (currentStart < endOfDay) {
+    availableSlots.push({ start: currentStart, end: endOfDay });
+  }
+
+  return availableSlots;
+};
+
 export const BookingServices = {
   createNewBooking,
   getAllBooking,
   cancelBooking,
   updateBooking,
+  getAvailableSlots,
 };

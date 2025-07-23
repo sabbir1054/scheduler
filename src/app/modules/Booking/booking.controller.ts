@@ -6,6 +6,7 @@ import catchAsync from '../../../shared/catchAsync';
 import pick from '../../../shared/pick';
 import sendResponse from '../../../shared/sendResponse';
 import { bookingFilterableFields } from './booking.constant';
+import { IResourceType } from './booking.interface';
 import { BookingServices } from './booking.service';
 
 const createNewBooking = catchAsync(async (req: Request, res: Response) => {
@@ -47,9 +48,24 @@ const updateBooking = catchAsync(async (req: Request, res: Response) => {
     data: result,
   });
 });
+
+const getAvailableSlots = catchAsync(async (req: Request, res: Response) => {
+  const { resource, date } = req.query;
+  const result = await BookingServices.getAvailableSlots(
+    resource as IResourceType,
+    date as string,
+  );
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Available slots retrieve successfully.',
+    data: result,
+  });
+});
 export const BookingController = {
   createNewBooking,
   getAllBooking,
   cancelBooking,
   updateBooking,
+  getAvailableSlots,
 };

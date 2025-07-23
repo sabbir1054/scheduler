@@ -4,7 +4,7 @@ import { BookingController } from './booking.controller';
 import { BookingZodValidation } from './booking.validation';
 
 const router = express.Router();
-
+router.get('/available-slots', BookingController.getAvailableSlots);
 router.post(
   '/',
   validateRequest(BookingZodValidation.createBookingValidation),
@@ -17,4 +17,5 @@ router.patch(
   validateRequest(BookingZodValidation.updateBookingValidation),
   BookingController.updateBooking,
 );
+
 export const BookingRoutes = router;
