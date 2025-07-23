@@ -161,8 +161,18 @@ const getAllBooking = async (
     data: bookingsWithStatus,
   };
 };
+const cancelBooking = async (id: string): Promise<Booking> => {
+  const isBookingExist = await prisma.booking.findUnique({ where: { id } });
+  if (!isBookingExist) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Booking not found.');
+  }
+
+  const result = await prisma.booking.delete({ where: { id } });
+  return result;
+};
 
 export const BookingServices = {
   createNewBooking,
   getAllBooking,
+  cancelBooking,
 };
