@@ -74,7 +74,7 @@ const getAllBooking = async (
   options: IPaginationOptions,
 ): Promise<IGenericResponse<Booking[]>> => {
   const { limit, page, skip } = paginationHelpers.calculatePagination(options);
-  const { searchTerm, resource, date } = filters;
+  const { searchTerm, resource, date, status } = filters;
 
   const andConditions: any[] = [];
 
@@ -111,6 +111,22 @@ const getAllBooking = async (
     });
   }
 
+  //filtered based on status
+  if (status) {
+    if (status === 'upcoming') {
+      andConditions.push({ start: { gt: new Date() } });
+    }
+    if (status === 'past') {
+      andConditions.push({ end: { lt: new Date() } });
+    }
+    if (status === 'ongoing') {
+      andConditions.push({
+        start: { lte: new Date() },
+        end: { gte: new Date() },
+      });
+    }
+  }
+
   const whereConditions =
     andConditions.length > 0 ? { AND: andConditions } : {};
 
@@ -118,7 +134,12 @@ const getAllBooking = async (
     where: whereConditions,
     skip,
     take: limit,
-    orderBy: { start: 'asc' }, // Default sorting by upcoming time
+    orderBy:
+      status === 'past'
+        ? { end: 'desc' }
+        : options.sortBy && options.sortOrder
+          ? { [options.sortBy]: options.sortOrder }
+          : { start: 'asc' },
   });
 
   const total = await prisma.booking.count({
