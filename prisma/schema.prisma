@@ -6,13 +6,27 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id        String   @id @default(uuid())
-  name      String
-  email     String   @unique
-  createdAt DateTime @default(now())
+enum ResourceType {
+  MEETING_ROOM_A
+  MEETING_ROOM_B
+  CONFERENCE_HALL
+  PROJECTOR
+  LAPTOP
+}
+
+model Booking {
+  id              String       @id @default(uuid())
+  resource        ResourceType
+  start           DateTime
+  end             DateTime
+  requestedBy     String
+  durationMinutes Int
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@index([resource, start, end])
 }
