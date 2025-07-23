@@ -1,8 +1,13 @@
 import { Booking } from '@prisma/client';
 import httpStatus from 'http-status';
 import ApiError from '../../../errors/ApiError';
+import { getBookingStatus } from '../../../helpers/bookingStatus';
+import { paginationHelpers } from '../../../helpers/paginationHelper';
+import { IGenericResponse } from '../../../interfaces/common';
 import prisma from '../../../shared/prisma';
+import { IPaginationOptions } from './../../../interfaces/pagination';
 import {
+  bookingSearchableFields,
   BUFFER_MINUTES,
   MAX_DURATION_MINUTES,
   MIN_DURATION_MINUTES,
@@ -64,6 +69,79 @@ const createNewBooking = async (payload: Booking): Promise<Booking> => {
   return result;
 };
 
+const getAllBooking = async (
+  filters: any,
+  options: IPaginationOptions,
+): Promise<IGenericResponse<Booking[]>> => {
+  const { limit, page, skip } = paginationHelpers.calculatePagination(options);
+  const { searchTerm, resource, date } = filters;
+
+  const andConditions: any[] = [];
+
+  // Search by requestedBy
+  if (searchTerm) {
+    andConditions.push({
+      OR: bookingSearchableFields.map(field => ({
+        [field]: {
+          contains: searchTerm,
+          mode: 'insensitive',
+        },
+      })),
+    });
+  }
+
+  // Filter by resource if provided
+  if (resource) {
+    andConditions.push({
+      resource: resource,
+    });
+  }
+
+  // Filter by specific date if provided
+  if (date) {
+    const parsedDate = new Date(date);
+    const startOfDay = new Date(parsedDate.setHours(0, 0, 0, 0));
+    const endOfDay = new Date(parsedDate.setHours(23, 59, 59, 999));
+
+    andConditions.push({
+      start: { gte: startOfDay },
+    });
+    andConditions.push({
+      end: { lte: endOfDay },
+    });
+  }
+
+  const whereConditions =
+    andConditions.length > 0 ? { AND: andConditions } : {};
+
+  const result = await prisma.booking.findMany({
+    where: whereConditions,
+    skip,
+    take: limit,
+    orderBy: { start: 'asc' }, // Default sorting by upcoming time
+  });
+
+  const total = await prisma.booking.count({
+    where: whereConditions,
+  });
+
+  // Add status tags (Upcoming, Ongoing, Past)
+  const bookingsWithStatus = result.map(booking => ({
+    ...booking,
+    status: getBookingStatus(booking.start, booking.end),
+  }));
+
+  return {
+    meta: {
+      total,
+      page,
+      limit,
+    },
+    data: bookingsWithStatus,
+  };
+};
+
 export const BookingServices = {
   createNewBooking,
+  getAllBooking,
 };

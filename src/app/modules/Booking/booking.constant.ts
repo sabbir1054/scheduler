@@ -8,3 +8,12 @@ export const RESOURCE_TYPE = [
   'PROJECTOR',
   'LAPTOP',
 ];
+
+export const bookingSearchableFields: string[] = ['requestedBy'];
+
+export const bookingFilterableFields: string[] = [
+  'searchTerm',
+  'resource',
+  'date',
+  'status',
+];
