@@ -214,11 +214,30 @@ const getAvailableSlots = async (
 
   return availableSlots;
 };
+const listBookingsGroupedByResource = async () => {
+  const bookings = await prisma.booking.findMany({
+    orderBy: { start: 'asc' },
+  });
 
+  const grouped: Record<string, any[]> = {};
+
+  bookings.forEach(booking => {
+    if (!grouped[booking.resource]) {
+      grouped[booking.resource] = [];
+    }
+    grouped[booking.resource].push({
+      ...booking,
+      status: getBookingStatus(booking.start, booking.end), // Add status tag
+    });
+  });
+
+  return grouped;
+};
 export const BookingServices = {
   createNewBooking,
   getAllBooking,
   cancelBooking,
   updateBooking,
   getAvailableSlots,
+  listBookingsGroupedByResource,
 };

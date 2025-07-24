@@ -62,10 +62,22 @@ const getAvailableSlots = catchAsync(async (req: Request, res: Response) => {
     data: result,
   });
 });
+const listBookingsGroupedByResource = catchAsync(
+  async (req: Request, res: Response) => {
+    const result = await BookingServices.listBookingsGroupedByResource();
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: 'List booking successfully.',
+      data: result,
+    });
+  },
+);
 export const BookingController = {
   createNewBooking,
   getAllBooking,
   cancelBooking,
   updateBooking,
   getAvailableSlots,
+  listBookingsGroupedByResource,
 };

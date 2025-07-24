@@ -11,6 +11,7 @@ router.post(
   BookingController.createNewBooking,
 );
 router.get('/', BookingController.getAllBooking);
+router.get('/groupBy', BookingController.listBookingsGroupedByResource);
 router.delete('/:id', BookingController.cancelBooking);
 router.patch(
   '/:id',
