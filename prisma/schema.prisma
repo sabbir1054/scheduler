@@ -18,6 +18,15 @@ enum ResourceType {
   LAPTOP
 }
 
+model User {
+  id       String @id @default(uuid())
+  name     String
+  email    String @unique
+  password String
+
+  @@map("users")
+}
+
 model Booking {
   id              String       @id @default(uuid())
   resource        ResourceType
